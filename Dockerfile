@@ -8,6 +8,8 @@ RUN apt-get update && apt-get install -y curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src
+RUN ls -R /src/OsuToolsService/bin 2>/dev/null || echo "no bin dir"
+RUN ls -R /src/build 2>/dev/null || echo "no build dir"
 COPY . .
 
 # Устанавливаем зависимости и собираем проект целиком
