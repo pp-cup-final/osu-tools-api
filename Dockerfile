@@ -39,11 +39,13 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 
 COPY --from=ts-builder /app/build ./build
-# путь теперь содержит linux-x64
 COPY --from=cs-builder /cs-publish ./OsuToolsService/bin/Release/net10.0/linux-x64/publish
 
-# config-example.json лежит в корне репозитория
+# config-example.json в корне репо
 COPY config-example.json ./config.json
+
+# proto-файлы нужны Node-клиенту в рантайме (grpc_client.js читает ./proto/calculator.proto)
+COPY proto/ ./proto/
 
 EXPOSE 7272
 ENV PORT=7272
