@@ -1,45 +1,47 @@
-# --- Этап 1: Сборка (нужны и .NET SDK, и Node.js) ---
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS builder
+# ---------- Stage 1: собираем C#-сервис ----------
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS cs-builder
+WORKDIR /app
+COPY OsuToolsService/ ./OsuToolsService/
+# путь publish-папки зафиксируем, чтобы потом скопировать
+RUN dotnet publish -c Release -o /cs-publish ./OsuToolsService/OsuToolsService.csproj
 
-# Устанавливаем Node.js 22
-RUN apt-get update && apt-get install -y curl \
-    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-    && apt-get install -y nodejs \
-    && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /src
-RUN ls -R /src/OsuToolsService/bin 2>/dev/null || echo "no bin dir"
-RUN ls -R /src/build 2>/dev/null || echo "no build dir"
-COPY . .
-
-# Устанавливаем зависимости и собираем проект целиком
-RUN npm ci
-RUN npm run build
-
-# --- Этап 2: Финальный образ ---
-FROM mcr.microsoft.com/dotnet/runtime:10.0 AS runtime
-
-# Устанавливаем Node.js 22 в финальный образ
-RUN apt-get update && apt-get install -y curl \
-    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-    && apt-get install -y nodejs \
-    && rm -rf /var/lib/apt/lists/*
-
+# ---------- Stage 2: собираем TypeScript ----------
+FROM node:22-bookworm AS ts-builder
 WORKDIR /app
 
-# Копируем собранные артефакты из builder'а
-COPY --from=builder /src/build ./build
-COPY --from=builder /src/node_modules ./node_modules
-COPY --from=builder /src/package.json ./
+# protoc + bash нужны для scripts/proto-gen.sh
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        protobuf-compiler bash curl unzip git \
+    && rm -rf /var/lib/apt/lists/*
 
-# Копируем C#-сервис (путь уточните в репозитории, обычно bin/Release/net10.0/publish)
-COPY --from=builder /src/OsuToolsService/bin/Release/net10.0/linux-x64/publish ./OsuToolsService
+COPY package*.json ./
+RUN npm ci
 
-# Если в репозитории есть proto-файлы или другие ресурсы — скопируйте их тоже
-# COPY --from=builder /src/proto ./proto
+COPY . .
+RUN bash scripts/proto-gen.sh
+RUN npx tsc
 
-# Уточните порт в README репозитория (по умолчанию 3000)
-EXPOSE 3000
+# ---------- Stage 3: рантайм ----------
+FROM node:22-bookworm-slim AS runner
+WORKDIR /app
 
-# Уточните команду запуска в package.json (обычно "start" или "node build/index.js")
-CMD ["node", "build/index.js"]
+# .NET runtime — если ваш TS-код спавнит C#-процесс
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        aspnetcore-runtime-8.0 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+# собранный TS
+COPY --from=ts-builder /app/build ./build
+
+# собранный C# — ВАЖНО: путь должен совпадать с тем,
+# по которому main.js ищет бинарь в рантайме
+COPY --from=cs-builder /cs-publish ./OsuToolsService/bin/Release/net8.0/publish
+
+EXPOSE 7272
+ENV PORT=7272
+ENV NODE_ENV=production
+
+CMD ["node", "build/src/main.js"]
