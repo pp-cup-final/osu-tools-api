@@ -33,7 +33,7 @@ COPY --from=builder /src/node_modules ./node_modules
 COPY --from=builder /src/package.json ./
 
 # Копируем C#-сервис (путь уточните в репозитории, обычно bin/Release/net10.0/publish)
-COPY --from=builder /src/OsuToolsService/bin/Release/net10.0/publish ./OsuToolsService
+COPY --from=builder /src/OsuToolsService/bin/Release/net10.0/linux-x64/publish ./OsuToolsService
 
 # Если в репозитории есть proto-файлы или другие ресурсы — скопируйте их тоже
 # COPY --from=builder /src/proto ./proto
