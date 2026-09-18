@@ -16,12 +16,12 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Grpc.AspNetCore" Version="2.67.0" />
-        <PackageReference Include="ppy.osu.Game" Version="2026.702.1" />
-        <PackageReference Include="ppy.osu.Game.Rulesets.Osu" Version="2026.702.1" />
-        <PackageReference Include="ppy.osu.Game.Rulesets.Taiko" Version="2026.702.1" />
-        <PackageReference Include="ppy.osu.Game.Rulesets.Catch" Version="2026.702.1" />
-        <PackageReference Include="ppy.osu.Game.Rulesets.Mania" Version="2026.702.1" />
-    </ItemGroup>
+    <PackageReference Include="Grpc.AspNetCore" Version="2.67.0" />
+    <PackageReference Include="ppy.osu.Game" Version="2026.916.0" />
+    <PackageReference Include="ppy.osu.Game.Rulesets.Osu" Version="2026.916.0" />
+    <PackageReference Include="ppy.osu.Game.Rulesets.Taiko" Version="2026.916.0" />
+    <PackageReference Include="ppy.osu.Game.Rulesets.Catch" Version="2026.916.0" />
+    <PackageReference Include="ppy.osu.Game.Rulesets.Mania" Version="2026.916.0" />
+</ItemGroup>
 
 </Project>
