@@ -1,37 +1,43 @@
-# --- Этап 1: Сборка C#-сервиса ---
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS dotnet-builder
-WORKDIR /src
-COPY . .
-RUN dotnet publish -c Release -o /app/publish
+# --- Этап 1: Сборка (нужны и .NET SDK, и Node.js) ---
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS builder
 
-# --- Этап 2: Сборка Node.js API ---
-FROM node:22-alpine AS node-builder
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build
-
-# --- Этап 3: Финальный образ ---
-FROM mcr.microsoft.com/dotnet/runtime:10.0 AS runtime
-WORKDIR /app
-
-# Устанавливаем Node.js в финальный образ
+# Устанавливаем Node.js 22
 RUN apt-get update && apt-get install -y curl \
     && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Копируем собранный C#-сервис
-COPY --from=dotnet-builder /app/publish ./dotnet-service
+WORKDIR /src
+COPY . .
 
-# Копируем Node.js API и зависимости
-COPY --from=node-builder /app/dist ./dist
-COPY --from=node-builder /app/node_modules ./node_modules
-COPY --from=node-builder /app/package.json ./
+# Устанавливаем зависимости и собираем проект целиком
+RUN npm ci
+RUN npm run build
 
-# Открываем порт, который слушает Node.js API (уточните в репозитории)
+# --- Этап 2: Финальный образ ---
+FROM mcr.microsoft.com/dotnet/runtime:10.0 AS runtime
+
+# Устанавливаем Node.js 22 в финальный образ
+RUN apt-get update && apt-get install -y curl \
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Копируем собранные артефакты из builder'а
+COPY --from=builder /src/build ./build
+COPY --from=builder /src/node_modules ./node_modules
+COPY --from=builder /src/package.json ./
+
+# Копируем C#-сервис (путь уточните в репозитории, обычно bin/Release/net10.0/publish)
+COPY --from=builder /src/OsuToolsService/bin/Release/net10.0/publish ./OsuToolsService
+
+# Если в репозитории есть proto-файлы или другие ресурсы — скопируйте их тоже
+# COPY --from=builder /src/proto ./proto
+
+# Уточните порт в README репозитория (по умолчанию 3000)
 EXPOSE 3000
 
-# Команда запуска (уточните в package.json репозитория)
-CMD ["node", "dist/index.js"]
+# Уточните команду запуска в package.json (обычно "start" или "node build/index.js")
+CMD ["node", "build/index.js"]
