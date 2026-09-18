@@ -2,6 +2,7 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS cs-builder
 WORKDIR /app
 COPY OsuToolsService/ ./OsuToolsService/
+COPY proto/ ./proto/
 RUN dotnet publish -c Release -o /cs-publish ./OsuToolsService/OsuToolsService.csproj
 
 # ---------- Stage 2: собираем TypeScript ----------
@@ -23,7 +24,6 @@ RUN npx tsc
 FROM node:22-bookworm-slim AS runner
 WORKDIR /app
 
-# .NET 10 Runtime (ASP.NET Core)
 RUN apt-get update && apt-get install -y --no-install-recommends \
         curl ca-certificates libicu72 libssl3 zlib1g \
     && curl -sSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh \
@@ -39,8 +39,6 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 
 COPY --from=ts-builder /app/build ./build
-
-# ❗ путь net10.0 вместо net8.0 — путь должен совпадать с тем, где код ищет бинарь
 COPY --from=cs-builder /cs-publish ./OsuToolsService/bin/Release/net10.0/publish
 
 EXPOSE 7272
