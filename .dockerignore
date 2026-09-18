@@ -5,7 +5,7 @@ OsuToolsService.Tests/obj/
 build/
 node_modules/
 cache/
-config.json
+
 references/
 test/
 *.md

@@ -41,6 +41,9 @@ RUN npm ci --omit=dev
 COPY --from=ts-builder /app/build ./build
 COPY --from=cs-builder /cs-publish ./OsuToolsService/bin/Release/net10.0/publish
 
+# ⬇️ ВОТ ЭТА СТРОКА — копируем шаблон под именем config.json
+COPY OsuToolsService/config-example.json ./config.json
+
 EXPOSE 7272
 ENV PORT=7272
 ENV NODE_ENV=production
