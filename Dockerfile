@@ -3,7 +3,7 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS cs-builder
 WORKDIR /app
 COPY OsuToolsService/ ./OsuToolsService/
 COPY proto/ ./proto/
-RUN dotnet publish -c Release -o /cs-publish ./OsuToolsService/OsuToolsService.csproj
+RUN dotnet publish -c Release -r linux-x64 --self-contained false -o /cs-publish ./OsuToolsService/OsuToolsService.csproj
 
 # ---------- Stage 2: собираем TypeScript ----------
 FROM node:22-bookworm AS ts-builder
@@ -39,10 +39,10 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 
 COPY --from=ts-builder /app/build ./build
-COPY --from=cs-builder /cs-publish ./OsuToolsService/bin/Release/net10.0/publish
+# путь теперь содержит linux-x64
+COPY --from=cs-builder /cs-publish ./OsuToolsService/bin/Release/net10.0/linux-x64/publish
 
-# config-example.json лежит в корне репозитория — копируем его как config.json
-# C#-сервис ищет ./config.json относительно cwd (= /app)
+# config-example.json лежит в корне репозитория
 COPY config-example.json ./config.json
 
 EXPOSE 7272
